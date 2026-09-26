@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        var th = localStorage.getItem('construction-app:theme') || 'dark';
+        var dark = th === 'dark' || (th === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      } catch (e) {}
+    </script>
+
+    <title>Construction Estimator — Material, BOQ & Cost Calculator</title>
+    <meta
+      name="description"
+      content="Free online construction estimator. Calculate brick, concrete, plaster, tile, and material quantities with a full BOQ and cost report. Includes 2D floor plan and 3D visualizer."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://your-production-domain.example/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Construction Estimator — Material, BOQ & Cost Calculator" />
+    <meta
+      property="og:description"
+      content="Calculate construction material quantities, BOQ, and costs. 2D floor plan + 3D visualizer. Free to use, no signup required."
+    />
+    <meta property="og:url" content="https://your-production-domain.example/" />
+    <meta property="og:site_name" content="Construction Estimator" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Construction Estimator — Material, BOQ & Cost Calculator" />
+    <meta
+      name="twitter:description"
+      content="Calculate construction material quantities, BOQ, and costs with a 2D plan and 3D visualizer."
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

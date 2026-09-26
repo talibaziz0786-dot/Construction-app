@@ -1,0 +1,78 @@
+{
+  "calculators": [
+    {
+      "calculatorId": "room.floor-area",
+      "methodologyVersion": "1.0.0",
+      "domain": "space",
+      "category": "geometric",
+      "name": "Room Floor Area Calculator",
+      "description": "Calculates the floor area of a rectangular room from length and width measurements",
+      "inputType": "RoomFloorAreaInput",
+      "outputType": "RoomFloorAreaOutput",
+      "formula": "area = length * width",
+      "units": {
+        "length": "m",
+        "width": "m",
+        "area": "sq.m"
+      },
+      "assumptions": [
+        "Room is rectangular",
+        "Measurements are taken from exterior dimensions"
+      ],
+      "limitations": [
+        "Does not account for irregular room shapes"
+      ],
+      "isEstimate": false
+    },
+    {
+      "calculatorId": "wall.net-area",
+      "methodologyVersion": "1.0.0",
+      "domain": "space",
+      "category": "geometric",
+      "name": "Wall Net Area Calculator",
+      "description": "Calculates the net wall area for a single wall with openings deductions",
+      "inputType": "WallNetAreaInput",
+      "outputType": "WallNetAreaOutput",
+      "formula": "netArea = grossArea - totalOpeningArea",
+      "units": {
+        "length": "m",
+        "height": "m",
+        "area": "sq.m"
+      },
+      "assumptions": [
+        "Single rectangular wall section",
+        "Openings (doors/windows) are rectangular",
+        "No wall penetrations other than standard openings"
+      ],
+      "limitations": [
+        "Does not account for architectural projections/recesses",
+        "Assumes uniform wall thickness"
+      ],
+      "isEstimate": false
+    },
+    {
+      "calculatorId": "masonry.brick-quantity",
+      "methodologyVersion": "1.0.0",
+      "domain": "masonry",
+      "category": "material-quantity",
+      "name": "Masonry Brick Quantity Calculator",
+      "description": "Calculates theoretical and procurement brick quantities from masonry volume",
+      "inputType": "MasonryBrickQuantityInput",
+      "outputType": "MasonryBrickQuantityOutput",
+      "formula": "quantity = volume / (brickModule + mortarJoint)^3",
+      "units": {
+        "volume": "cu.m",
+        "length": "m",
+        "width": "m",
+        "height": "m",
+        "quantity": "piece"
+      },
+      "assumptions": [
+        "Mortar joint applied uniformly on all six faces of each brick",
+        "Standard modular brick dimensions",
+        "No waste from cutting bricks to shape"
+      ],
+      "isEstimate": true
+    }
+  ]
+}

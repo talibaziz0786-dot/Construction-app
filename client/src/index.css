@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --page-bg: #ffffff;
+  --page-text: #0f172a;
+  --card-bg: #f8fafc;
+  --card-border: #e2e8f0;
+  --field-bg: #ffffff;
+  --field-border: #cbd5e1;
+  --field-text: #0f172a;
+  --muted-text: #475569;
+}
+
+.dark {
+  --page-bg: #0f172a;
+  --page-text: #f8fafc;
+  --card-bg: rgba(15, 23, 42, 0.6);
+  --card-border: #1e293b;
+  --field-bg: rgba(15, 23, 42, 0.7);
+  --field-border: #334155;
+  --field-text: #f8fafc;
+  --muted-text: #94a3b8;
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    display: block !important;
+  }
+  .print-area * {
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    background: transparent !important;
+  }
+  h1, h2, h3, p {
+    break-inside: avoid;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 8px;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--page-bg);
+  color: var(--page-text);
+  overflow-x: hidden;
+}
+
+/* Light-mode readability.
+   Components are authored against dark slate surfaces by default. Instead of
+   rewriting every card, the dark surface/text/border utilities actually used in
+   the app are mapped to light values whenever `.dark` is absent. Dark mode is
+   untouched (every rule is scoped to `:root:not(.dark)`).
+
+   `themeCoverage.test.ts` scans the source for slate utilities and fails if a
+   class used by a component has no mapping here, so this list cannot silently
+   fall behind the components again. */
+
+/* --- Surfaces --- */
+:root:not(.dark) .bg-slate-950 { background-color: #ffffff !important; }
+:root:not(.dark) .bg-slate-950\/40 { background-color: rgba(226, 232, 240, 0.6) !important; }
+:root:not(.dark) .bg-slate-950\/50 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-950\/60 { background-color: #f8fafc !important; }
+/* Dialog scrim: keep it dim so the dialog still reads as an overlay. */
+:root:not(.dark) .bg-slate-950\/80 { background-color: rgba(15, 23, 42, 0.35) !important; }
+:root:not(.dark) .bg-slate-900 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-900\/25 { background-color: #f8fafc !important; }
+:root:not(.dark) .bg-slate-900\/30 { background-color: #f8fafc !important; }
+:root:not(.dark) .bg-slate-900\/40 { background-color: #f8fafc !important; }
+:root:not(.dark) .bg-slate-900\/50 { background-color: #f8fafc !important; }
+:root:not(.dark) .bg-slate-900\/60 { background-color: #f8fafc !important; }
+:root:not(.dark) .bg-slate-900\/70 { background-color: #ffffff !important; }
+:root:not(.dark) .bg-slate-900\/80 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-900\/90 { background-color: #ffffff !important; }
+:root:not(.dark) .bg-slate-900\/95 { background-color: #ffffff !important; }
+:root:not(.dark) .bg-slate-800 { background-color: #e2e8f0 !important; }
+:root:not(.dark) .bg-slate-800\/20 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-800\/40 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-800\/50 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-800\/60 { background-color: #f1f5f9 !important; }
+:root:not(.dark) .bg-slate-700 { background-color: #cbd5e1 !important; }
+:root:not(.dark) .hover\:bg-slate-900:hover { background-color: #f1f5f9 !important; }
+:root:not(.dark) .hover\:bg-slate-800:hover { background-color: #e2e8f0 !important; }
+:root:not(.dark) .hover\:bg-slate-700:hover { background-color: #cbd5e1 !important; }
+
+/* --- Text --- */
+:root:not(.dark) .text-slate-100 { color: #0f172a !important; }
+:root:not(.dark) .text-slate-200 { color: #1e293b !important; }
+:root:not(.dark) .text-slate-300 { color: #334155 !important; }
+:root:not(.dark) .text-slate-400 { color: #475569 !important; }
+:root:not(.dark) .text-slate-500 { color: #64748b !important; }
+:root:not(.dark) .text-slate-600 { color: #64748b !important; }
+:root:not(.dark) .text-slate-700 { color: #334155 !important; }
+:root:not(.dark) .text-slate-800 { color: #1e293b !important; }
+:root:not(.dark) .text-slate-900 { color: #0f172a !important; }
+:root:not(.dark) .text-slate-950 { color: #020617 !important; }
+:root:not(.dark) .placeholder-slate-500::placeholder { color: #94a3b8 !important; }
+
+/* --- Borders & dividers --- */
+:root:not(.dark) .border-slate-900 { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-slate-800 { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-slate-800\/40 { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-slate-800\/60 { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-slate-800\/70 { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-slate-800\/80 { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-slate-700 { border-color: #cbd5e1 !important; }
+:root:not(.dark) .border-slate-700\/40 { border-color: #cbd5e1 !important; }
+:root:not(.dark) .border-slate-700\/60 { border-color: #cbd5e1 !important; }
+:root:not(.dark) .border-slate-700\/80 { border-color: #cbd5e1 !important; }
+:root:not(.dark) .border-slate-600 { border-color: #cbd5e1 !important; }
+:root:not(.dark) .divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0 !important; }
+:root:not(.dark) .divide-slate-800\/40 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0 !important; }
+:root:not(.dark) .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0 !important; }
+
+/* --- Gradients --- */
+:root:not(.dark) .from-slate-900 { --tw-gradient-from: #f8fafc !important; }
+:root:not(.dark) .from-slate-950 { --tw-gradient-from: #f8fafc !important; }
+:root:not(.dark) .to-slate-950 { --tw-gradient-to: #f1f5f9 !important; }
+:root:not(.dark) .via-slate-950 { --tw-gradient-via: #f1f5f9 !important; }
+
+input, select, button {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
