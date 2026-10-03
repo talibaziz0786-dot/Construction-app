@@ -254,13 +254,14 @@ export const CalculatorInputForm: React.FC<CalculatorInputFormProps> = ({
         <input id={`field-${field.name}`} type="number" inputMode="decimal" value={displayValues[field.name] ?? ''} min={0} step={field.step}
           onChange={(e) => setDisplayValues((pr) => ({ ...pr, [field.name]: e.target.value }))}
           aria-invalid={Boolean(errors[field.name])}
+          aria-describedby={errors[field.name] ? `err-${field.name}` : undefined}
           className="w-full rounded-xl border px-3.5 py-3 pr-16 text-base min-h-[48px]" />
         <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs opacity-60">{unitLabelFor(field)}</span>
       </div>
       {field.help && !errors[field.name] && <p className="mt-1 text-xs opacity-60">{field.help}</p>}
       {field.name === 'wastagePercentage' && <p className="mt-1 text-xs opacity-60">{t('explainWastageBody')}</p>}
       {errors[field.name] && fieldTouched[field.name] && (
-        <p className="mt-1 text-xs text-rose-500" role="alert">{errors[field.name]}</p>
+        <p id={`err-${field.name}`} className="mt-1 text-xs text-rose-500" role="alert">{errors[field.name]}</p>
       )}
     </div>
   );

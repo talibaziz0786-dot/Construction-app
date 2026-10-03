@@ -68,6 +68,9 @@ export const CalculatorBoqPanel: React.FC<CalculatorBoqPanelProps> = ({
 }) => {
   const [currency, setCurrency] = useState(boq.currency || 'INR');
   const { t } = useLanguage();
+  // Keep the rate draft in sync when a new calculation (or applied rates)
+  // delivers a fresh BOQ object — otherwise stale totals linger beside new
+  // quantities after recalculation.
   const [rates, setRates] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       boq.sections
@@ -75,6 +78,17 @@ export const CalculatorBoqPanel: React.FC<CalculatorBoqPanelProps> = ({
         .map((item) => [item.id, item.rate !== null ? String(item.rate) : ''])
     )
   );
+
+  React.useEffect(() => {
+    setCurrency(boq.currency || 'INR');
+    setRates(
+      Object.fromEntries(
+        boq.sections
+          .flatMap((section) => section.items)
+          .map((item) => [item.id, item.rate !== null ? String(item.rate) : ''])
+      )
+    );
+  }, [boq]);
 
   const items = boq.sections.flatMap((section) => section.items);
   const pricedItems = items.filter((item) => item.amount !== null);

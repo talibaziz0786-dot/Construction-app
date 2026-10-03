@@ -24,7 +24,7 @@ import {
   createEmptyRateCard,
   getRateFromCard,
 } from '../domain/project/RateCard.js';
-import { normalizeUnitLabel } from '../domain/units/labels.js';
+import { resolveRateForUnit } from '../domain/rates/resolution.js';
 import { Unit } from '../domain/units/types.js';
 import {
   DimensionMismatchError,
@@ -102,36 +102,17 @@ function toRateCard(raw: RateCardRequest): RateCard {
 /**
  * Resolves the rate for one BOQ line.
  * A rate is only used when it is a positive amount AND its unit is understood and
- * matches the unit the quantity is expressed in — otherwise no amount is produced.
+ * dimension-compatible with the quantity — otherwise no amount is produced.
+ * Compatible-but-different units are converted through the canonical unit system.
+ * The rules live in `domain/rates/resolution.ts` (one implementation for every
+ * pricing path: quick calculators and project estimates).
  */
 function resolveLineRate(
   entry: RateCardEntry | undefined,
   requiredUnit: Unit
 ): { rate: number | null; warning?: string } {
-  if (!entry || entry.rate === null) {
-    return { rate: null };
-  }
-
-  if (!Number.isFinite(entry.rate) || entry.rate <= 0) {
-    return { rate: null, warning: `Configured ${entry.category} rate is not a valid positive amount` };
-  }
-
-  const normalizedUnit = normalizeUnitLabel(entry.unit);
-  if (normalizedUnit === null) {
-    return {
-      rate: null,
-      warning: `Configured ${entry.category} rate uses an unrecognised unit "${entry.unit}"`,
-    };
-  }
-
-  if (normalizedUnit !== requiredUnit) {
-    return {
-      rate: null,
-      warning: `Configured ${entry.category} rate is per "${entry.unit}", which does not match the required unit "${requiredUnit}"`,
-    };
-  }
-
-  return { rate: entry.rate };
+  const resolution = resolveRateForUnit(entry, requiredUnit);
+  return { rate: resolution.rate, warning: resolution.warning };
 }
 
 function buildBoq(input: {

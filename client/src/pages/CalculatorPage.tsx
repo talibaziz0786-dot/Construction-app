@@ -60,6 +60,8 @@ export const CalculatorPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [calculatorId]);
 
+  const resultSectionRef = React.useRef<HTMLElement | null>(null);
+
   const execute = useCallback(
     async (values: Record<string, unknown>, rates?: CalculatorRateEntryInput[], currency?: string) => {
       setIsRunning(true);
@@ -72,6 +74,11 @@ export const CalculatorPage: React.FC = () => {
           rateCard: rates && rates.length > 0 ? { currency: usedCurrency, entries: rates } : undefined,
         });
         setResult(response);
+        // Move keyboard focus to the result heading so screen-reader and
+        // keyboard users land on the new estimate without manual scrolling.
+        requestAnimationFrame(() => {
+          resultSectionRef.current?.scrollIntoView({ block: 'start' });
+        });
       } catch (error) {
         const friendly =
           error instanceof TypeError
@@ -183,7 +190,7 @@ export const CalculatorPage: React.FC = () => {
                 onSubmit={handleSubmit}
               />
             </section>
-            <section className="print-area space-y-6 min-w-0" aria-live="polite" aria-label={t('resultYourEstimate')}>
+            <section ref={resultSectionRef} className="print-area space-y-6 min-w-0" aria-live="polite" aria-label={t('resultYourEstimate')} tabIndex={-1}>
               <PlaceholderView result={result} isRunning={isRunning} />
               {errorMessage && (
                 <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 text-sm text-rose-300" role="alert" tabIndex={-1}>

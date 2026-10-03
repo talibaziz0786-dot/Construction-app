@@ -12,6 +12,7 @@
 import { RateCard, RateCardEntry, SupportedMaterialCategory, getRateFromCard } from '../domain/project/RateCard';
 import { Boq, BoqBuilder, createBoqItem, createBoqSection } from '../domain/boq';
 import { Unit } from '../domain/units/types';
+import { resolveRateForUnit } from '../domain/rates/resolution';
 import { EstimationOrchestrator } from '../engine/orchestration/EstimationOrchestrator';
 
 export interface RoomCalculationResult {
@@ -28,6 +29,10 @@ export interface RoomCalculationResult {
   procurementVolumeConcreteCuM?: number;
   plasterVolumeCuM?: number;
   procurementVolumePlasterCuM?: number;
+  /** Plaster material decomposition produced by `plaster.quantity` (bags of a documented bag weight). */
+  plasterCementBags?: number;
+  plasterSandVolumeCuM?: number;
+  plasterMixRatio?: string;
   theoreticalTileCount?: number;
   procurementTileCount?: number;
 }
@@ -37,7 +42,7 @@ export interface MaterialCostItem {
   material: string;
   theoreticalQuantity: number;
   procurementQuantity: number;
-  /** Unit of the configured rate, exactly as the user entered it. */
+  /** Unit the stored rate is expressed in (canonical unit when a conversion was applied). */
   unit: string;
   /** Canonical unit of the quantity, used for BOQ lines. */
   boqUnit: Unit;
@@ -48,7 +53,10 @@ export interface MaterialCostItem {
   theoreticalAmount: number | null;
   procurementAmount: number | null;
   missingRate: boolean;
+  /** Set when the entered rate unit was converted into `boqUnit` before pricing. */
+  rateConvertedFrom?: string;
 }
+
 
 export interface RoomCostSummary {
   roomId: string;
@@ -79,26 +87,41 @@ export interface CostCalculationOptions {
 
 interface ResolvedRate {
   entry: RateCardEntry | undefined;
-  /** Usable (finite, strictly positive) rate, or `null` when unavailable. */
+  /** Usable rate per `boqUnit`, or `null` when unavailable. */
   rate: number | null;
+  /** Unit the returned rate is expressed in. */
   unit: string;
+  /** Set when the entered unit was converted into the quantity unit. */
+  convertedFromUnit?: string;
+  /** Why no rate was produced, or the conversion that was applied. */
+  warning?: string;
 }
 
 /**
- * Resolves the rate for a material category. A rate is usable only when it is a
- * finite, strictly positive number — zero or invalid values are treated as
- * "not configured" so a price is never silently invented.
+ * Resolves the rate for a material category against the canonical unit of the
+ * quantity it must price. A rate is usable only when it is a positive amount in a
+ * unit that is understood and dimension-compatible with the quantity — otherwise
+ * no price is produced. Compatible-but-different units are converted for real
+ * (never relabelled), so a rate entered per cu.ft still prices a cu.m line.
  */
 function resolveRate(
   rateCard: RateCard,
   category: SupportedMaterialCategory,
+  boqUnit: Unit,
   fallbackUnit: string
 ): ResolvedRate {
   const entry = getRateFromCard(rateCard, category);
-  const rawRate = entry?.rate ?? null;
-  const rate = rawRate !== null && Number.isFinite(rawRate) && rawRate > 0 ? rawRate : null;
-  return { entry, rate, unit: entry?.unit ?? fallbackUnit };
+  const resolution = resolveRateForUnit(entry, boqUnit);
+
+  return {
+    entry,
+    rate: resolution.rate,
+    unit: resolution.convertedFromUnit ? boqUnit : entry?.unit ?? fallbackUnit,
+    convertedFromUnit: resolution.convertedFromUnit,
+    warning: resolution.warning,
+  };
 }
+
 
 /** Calculates an amount from a quantity and a resolved rate. */
 function amountFor(quantity: number | undefined, rate: number | null): number | null {
@@ -128,7 +151,7 @@ export function calculateRoomCosts(
     theoreticalQuantity: number;
     procurementQuantity: number;
   }): number => {
-    const resolved = resolveRate(rateCard, line.category, line.fallbackUnit);
+    const resolved = resolveRate(rateCard, line.category, line.boqUnit, line.fallbackUnit);
     const procurementAmount = amountFor(line.procurementQuantity, resolved.rate);
 
     items.push({
@@ -144,10 +167,16 @@ export function calculateRoomCosts(
       theoreticalAmount: amountFor(line.theoreticalQuantity, resolved.rate),
       procurementAmount,
       missingRate: resolved.rate === null,
+      rateConvertedFrom: resolved.convertedFromUnit,
     });
 
     if (resolved.rate === null) {
-      warnings.push(`${line.fallbackName} rate not configured — cost cannot be calculated`);
+      // A specific reason (unrecognised / incompatible unit) beats the generic hint.
+      warnings.push(
+        resolved.warning ?? `${line.fallbackName} rate not configured — cost cannot be calculated`
+      );
+    } else if (resolved.warning) {
+      warnings.push(resolved.warning);
     }
 
     return procurementAmount ?? 0;
@@ -187,6 +216,34 @@ export function calculateRoomCosts(
       theoreticalQuantity: roomResult.plasterVolumeCuM,
       procurementQuantity: roomResult.procurementVolumePlasterCuM ?? 0,
     });
+
+    // Cement and sand are the materials actually bought for plaster. Both values
+    // come straight from the verified plaster calculator (mix 1:4, dry factor
+    // 1.33, 1440 kg/cu.m, documented bag weight) — never from a second formula.
+    // Cement stays in its own unit (bags) and is never merged with kg mass.
+    if (roomResult.plasterCementBags !== undefined) {
+      pricedTotal += register({
+        category: 'cement',
+        fallbackName: `Cement for plaster${roomResult.plasterMixRatio ? ` (mix ${roomResult.plasterMixRatio})` : ''}`,
+        fallbackUnit: 'bags',
+        boqUnit: Unit.PIECE,
+        sourceCalculatorId: 'plaster.quantity',
+        theoreticalQuantity: roomResult.plasterCementBags,
+        procurementQuantity: roomResult.plasterCementBags,
+      });
+    }
+
+    if (roomResult.plasterSandVolumeCuM !== undefined) {
+      pricedTotal += register({
+        category: 'sand',
+        fallbackName: `Sand / balu for plaster${roomResult.plasterMixRatio ? ` (mix ${roomResult.plasterMixRatio})` : ''}`,
+        fallbackUnit: 'cu.m',
+        boqUnit: Unit.CU_M,
+        sourceCalculatorId: 'plaster.quantity',
+        theoreticalQuantity: roomResult.plasterSandVolumeCuM,
+        procurementQuantity: roomResult.plasterSandVolumeCuM,
+      });
+    }
   }
 
   if (roomResult.theoreticalTileCount !== undefined) {
