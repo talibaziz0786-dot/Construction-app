@@ -20,10 +20,10 @@ export interface DerivedWall {
 export function deriveWallsFromRoom(room: IRoomSchema): DerivedWall[] {
   const { id: roomId, lengthMeters, widthMeters, wallHeightMeters, wallThicknessMeters, openings = [] } = room;
 
-  const northOpenings = openings.filter((o) => (o.wallSide || 'north') === 'north');
-  const southOpenings = openings.filter((o) => o.wallSide === 'south');
-  const eastOpenings = openings.filter((o) => o.wallSide === 'east');
-  const westOpenings = openings.filter((o) => o.wallSide === 'west');
+  const northOpenings = openings.filter((o: IOpeningSchema) => (o.wallSide || 'north') === 'north');
+  const southOpenings = openings.filter((o: IOpeningSchema) => o.wallSide === 'south');
+  const eastOpenings = openings.filter((o: IOpeningSchema) => o.wallSide === 'east');
+  const westOpenings = openings.filter((o: IOpeningSchema) => o.wallSide === 'west');
 
   const walls: DerivedWall[] = [
     {

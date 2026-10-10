@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { verifyAuthToken } from './jwt.js';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -18,10 +18,7 @@ export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction)
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const payload = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'default-secret-change-in-production'
-    ) as { userId: string; email: string };
+    const payload = verifyAuthToken(token);
 
     if (!payload.userId) {
       return res.status(401).json({ error: 'Invalid token' });
@@ -45,10 +42,7 @@ export const optionalAuth = (req: AuthRequest, _res: Response, next: NextFunctio
   try {
     const token = req.cookies?.['auth-token'];
     if (token) {
-      const payload = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'default-secret-change-in-production'
-      ) as { userId: string; email: string };
+      const payload = verifyAuthToken(token);
       if (payload.userId) {
         req.userId = payload.userId;
         req.userEmail = payload.email;

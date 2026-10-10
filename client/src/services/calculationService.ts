@@ -138,6 +138,20 @@ export function buildProjectCalculatePayload(project: unknown, scope?: unknown):
               brickHeightMeters: positiveOr(r.brickHeightMeters, 0.02, 0.09),
               mortarJointThicknessMeters: num(r.mortarJointThicknessMeters, 0.01),
               wastagePercentage: num(r.wastagePercentage, 5),
+              // Optional finishing specs: only forwarded when the user actually set
+              // them, so the server applies its own documented defaults otherwise.
+              ...(typeof r.slabDepthMeters === 'number' && Number.isFinite(r.slabDepthMeters)
+                ? { slabDepthMeters: r.slabDepthMeters }
+                : {}),
+              ...(typeof r.plasterThicknessMeters === 'number' && Number.isFinite(r.plasterThicknessMeters)
+                ? { plasterThicknessMeters: r.plasterThicknessMeters }
+                : {}),
+              ...(typeof r.tileLengthMeters === 'number' && Number.isFinite(r.tileLengthMeters)
+                ? { tileLengthMeters: r.tileLengthMeters }
+                : {}),
+              ...(typeof r.tileWidthMeters === 'number' && Number.isFinite(r.tileWidthMeters)
+                ? { tileWidthMeters: r.tileWidthMeters }
+                : {}),
             };
           }),
         };

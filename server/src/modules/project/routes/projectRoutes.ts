@@ -1,6 +1,7 @@
-import express, { Request, Response, Router } from 'express';
+import express, { Response, Router } from 'express';
 import { z } from 'zod';
 import { ProjectModel } from '../models/ProjectModel.js';
+import { AuthRequest, optionalAuth } from '../../../auth/auth.middleware.js';
 import { SUPPORTED_MATERIAL_CATEGORIES } from '../../estimation/domain/project/RateCard.js';
 
 const router = Router();
@@ -32,6 +33,10 @@ const RoomSchema = z.object({
   plasterThicknessMeters: z.number().min(0.001).max(0.1).default(0.012),
   tileLengthMeters: z.number().min(0.05).max(2).default(0.5),
   tileWidthMeters: z.number().min(0.05).max(2).default(0.5),
+  cementRatio: z.number().min(0.5).max(10).default(1),
+  sandRatio: z.number().min(1).max(12).default(4),
+  dryVolumeFactor: z.number().min(1).max(2).default(1.33),
+  cementBagWeightKg: z.number().min(20).max(100).default(50),
 });
 
 const FloorSchema = z.object({
@@ -50,8 +55,8 @@ const BuildingSchema = z.object({
 const RateCardEntrySchema = z.object({
   category: z.enum(SUPPORTED_MATERIAL_CATEGORIES),
   item: z.string().max(120).optional(),
-  rate: z.number().nullable().refine(
-    (v) => v === null || (Number.isFinite(v) && v >= 0 && v <= 1000000),
+  rate: z.number().finite().nullable().refine(
+    (v) => v === null || (v >= 0 && v <= 1000000),
     { message: 'Rate must be null, 0, or a non-negative number up to 1000000' }
   ),
   unit: z.string().min(1).max(20),
@@ -80,22 +85,44 @@ function asString(v: string | string[] | undefined): string {
   return v ?? '';
 }
 
-router.get('/projects/:id', async (req: Request, res: Response) => {
+function isOwnedBySomeoneElse(docUserId: unknown, reqUserId: string | undefined): boolean {
+  return typeof docUserId === 'string' && docUserId.length > 0 && docUserId !== reqUserId;
+}
+
+function toDocUserId(doc: unknown): string | undefined {
+  if (doc && typeof doc === 'object' && 'userId' in doc) {
+    const v = (doc as { userId?: unknown }).userId;
+    return typeof v === 'string' ? v : undefined;
+  }
+  return undefined;
+}
+
+router.get('/projects/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
     if (ProjectModel.db.readyState === 1) {
       const doc = await ProjectModel.findOne({ projectId: id });
-      if (doc) return res.json(doc);
+      if (doc) {
+        if (isOwnedBySomeoneElse(doc.userId, req.userId)) {
+          return res.status(404).json({ error: 'Project not found' });
+        }
+        return res.json(doc);
+      }
     }
     const mem = memoryProjects.get(id);
-    return mem ? res.json(mem) : res.status(404).json({ error: 'Project not found' });
+    if (mem) {
+      if (isOwnedBySomeoneElse(toDocUserId(mem), req.userId)) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      return res.json(mem);
+    }
+    return res.status(404).json({ error: 'Project not found' });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: 'Failed to load project' });
   }
 });
 
-router.post('/projects', async (req: Request, res: Response) => {
+router.post('/projects', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = ProjectSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -105,37 +132,50 @@ router.post('/projects', async (req: Request, res: Response) => {
     const validated = parsed.data;
 
     if (ProjectModel.db.readyState === 1) {
+      const existing = await ProjectModel.findOne({ projectId: validated.projectId });
+      if (existing && isOwnedBySomeoneElse(existing.userId, req.userId)) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      const update = req.userId ? { ...validated, userId: req.userId } : validated;
       const updated = await ProjectModel.findOneAndUpdate(
         { projectId: validated.projectId },
-        validated,
+        update,
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
       return res.json(updated);
     }
-    memoryProjects.set(validated.projectId, validated);
-    res.json(validated);
+    const memExisting = memoryProjects.get(validated.projectId);
+    if (memExisting && isOwnedBySomeoneElse(toDocUserId(memExisting), req.userId)) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    const memValue = req.userId ? { ...validated, userId: req.userId } : validated;
+    memoryProjects.set(validated.projectId, memValue);
+    res.json(memValue);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: 'Failed to save project' });
   }
 });
 
 // GET rate card for a project
-router.get('/projects/:id/rate-card', async (req: Request, res: Response) => {
+router.get('/projects/:id/rate-card', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
-    let project: { rateCard?: unknown } | null = null;
+    let project: { rateCard?: unknown; userId?: unknown } | null = null;
 
     if (ProjectModel.db.readyState === 1) {
       const doc = await ProjectModel.findOne({ projectId: id });
       if (doc) project = doc;
     }
     if (!project) {
-      const mem = memoryProjects.get(id) as { rateCard?: unknown } | undefined;
+      const mem = memoryProjects.get(id) as { rateCard?: unknown; userId?: unknown } | undefined;
       if (mem) project = mem;
     }
 
     if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (isOwnedBySomeoneElse(project.userId, req.userId)) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
@@ -149,7 +189,9 @@ router.get('/projects/:id/rate-card', async (req: Request, res: Response) => {
 });
 
 // PUT/UPDATE rate card for a project
-router.put('/projects/:id/rate-card', async (req: Request, res: Response) => {
+// Legacy guest-compatible mutation path. Authenticated projects require the
+// caller to own the project; guest-created projects remain writable by guests.
+router.put('/projects/:id/rate-card', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
     const parsed = RateCardSchema.safeParse(req.body);
@@ -164,6 +206,10 @@ router.put('/projects/:id/rate-card', async (req: Request, res: Response) => {
     };
 
     if (ProjectModel.db.readyState === 1) {
+      const existing = await ProjectModel.findOne({ projectId: id });
+      if (existing && isOwnedBySomeoneElse(existing.userId, req.userId)) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
       const doc = await ProjectModel.findOneAndUpdate(
         { projectId: id },
         { $set: { rateCard } },
@@ -173,6 +219,9 @@ router.put('/projects/:id/rate-card', async (req: Request, res: Response) => {
     }
 
     const existing = memoryProjects.get(id) as Record<string, unknown> | undefined;
+    if (existing && isOwnedBySomeoneElse(toDocUserId(existing), req.userId)) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
     if (existing) {
       existing.rateCard = rateCard;
       memoryProjects.set(id, existing);

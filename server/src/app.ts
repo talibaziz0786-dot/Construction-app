@@ -110,7 +110,16 @@ app.use((req: Request, res: Response) => {
 
 // Centralized error handler (no stack leak)
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('[error]', err.message);
+  const message = err?.message ?? '';
+  // CORS rejections are client configuration errors, not server crashes.
+  if (message.startsWith('CORS: origin')) {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  // Malformed JSON bodies should be 400, not 500.
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+  console.error('[error]', message);
   res.status(500).json({ error: 'Internal server error' });
 });
 

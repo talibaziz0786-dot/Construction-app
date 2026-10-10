@@ -1,9 +1,21 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { UserModel, hashPassword, IUser } from './user.model.js';
-import jwt from 'jsonwebtoken';
+import { signAuthToken, verifyAuthToken } from './jwt.js';
 
 const router = Router();
+
+const AUTH_COOKIE = 'auth-token';
+
+function authCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+}
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
@@ -44,19 +56,10 @@ router.post('/register', async (req: Request, res: Response) => {
     });
 
     // Generate JWT
-    const token = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.JWT_SECRET || 'default-secret-change-in-production',
-      { expiresIn: '7d' }
-    );
+    const token = signAuthToken({ userId: String(user._id), email: user.email });
 
     // Set secure cookie
-    res.cookie('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie(AUTH_COOKIE, token, authCookieOptions());
 
     // Return user data (without password)
     res.status(201).json({
@@ -97,19 +100,10 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Generate JWT
-    const token = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.JWT_SECRET || 'default-secret-change-in-production',
-      { expiresIn: '7d' }
-    );
+    const token = signAuthToken({ userId: String(user._id), email: user.email });
 
     // Set secure cookie
-    res.cookie('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie(AUTH_COOKIE, token, authCookieOptions());
 
     res.json({
       user: {
@@ -126,19 +120,24 @@ router.post('/login', async (req: Request, res: Response) => {
 
 // Logout endpoint
 router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('auth-token');
+  res.clearCookie(AUTH_COOKIE, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+  });
   res.json({ message: 'Logged out successfully' });
 });
 
 // Get current user
 router.get('/me', async (req: Request, res: Response) => {
   try {
-    const token = req.cookies?.['auth-token'];
+    const token = req.cookies?.[AUTH_COOKIE];
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'default-secret-change-in-production') as { userId: string };
+    const payload = verifyAuthToken<{ userId: string }>(token);
     const user = await UserModel.findById(payload.userId).select('-passwordHash');
     if (!user) {
       return res.status(401).json({ error: 'User not found' });

@@ -38,7 +38,7 @@ const orchestrator = EstimationOrchestrator.getInstance();
 const RateEntrySchema = z.object({
   category: z.enum(SUPPORTED_MATERIAL_CATEGORIES),
   item: z.string().max(120).optional(),
-  rate: z.number().nullable(),
+  rate: z.number().finite().nullable(),
   unit: z.string().min(1).max(20),
   currency: z.string().min(1).max(10).default('USD'),
   source: z.string().max(200).optional(),

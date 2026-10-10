@@ -3,7 +3,7 @@
 A professional construction estimation and home-planning platform that helps homeowners and contractors calculate material quantities, costs, and Bill of Quantities (BOQ) for house construction projects.
 
 ## Status
-Production-ready. Phase 0 complete.
+Web production-deployment ready (Vercel + Render + MongoDB Atlas config validated; see `STATUS.md` for phase status).
 
 ## Technology Stack
 - **Frontend**: React 19, Vite, TypeScript, Tailwind CSS v4
@@ -27,7 +27,7 @@ npm run dev   # Client: http://localhost:5173 | Server: http://localhost:3000
 ```bash
 npm run build      # Build client and server
 npm run type-check # TypeScript check
-npm test           # Server tests (44 tests)
+npm test           # Server tests (15 files / 95 tests)
 ```
 
 ---
@@ -47,11 +47,12 @@ Browser → Vercel (Frontend) → Render (Backend) → MongoDB Atlas
 
 ### Step 2: Backend (Render)
 
-1. New Web Service → Connect GitHub repo
+1. New Web Service → Connect GitHub repo (or import the included `render.yaml` blueprint)
 2. Root Directory: `server`
 3. Build: `npm install && npm run build`
 4. Start: `node dist/server.js`
-5. Environment variables:
+5. Health Check Path: `/api/health`
+6. Environment variables:
 
 ```
 MONGODB_URI=<your-atlas-srv>
@@ -65,7 +66,8 @@ NODE_ENV=production
 1. Import repo → Root Directory: `client`
 2. Build: `npm install && npm run build`
 3. Output: `dist`
-4. Environment variables:
+4. `client/vercel.json` is included and provides the SPA rewrite (`/* → /index.html`) automatically.
+5. Environment variables:
 
 ```
 VITE_API_BASE_URL=https://your-backend.onrender.com
@@ -93,6 +95,8 @@ VITE_ADSENSE_ENABLED=false    # set true after AdSense approval
 | `FRONTEND_URL` | Yes | Frontend origin(s) for CORS (comma-separated) |
 | `PORT` | No | Default 3000 |
 | `NODE_ENV` | No | `production` in prod |
+
+Startup validation: `MONGODB_URI` is always required. When `NODE_ENV=production`, `JWT_SECRET` and `FRONTEND_URL` are also required — the server refuses to start without them instead of falling back to a default signing secret or a localhost-only CORS allowlist.
 
 **Client (`client/.env`)**
 

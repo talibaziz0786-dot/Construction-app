@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Calculator, AlertTriangle, CheckCircle2, Home, Layers, FileText } from 'lucide-react';
 import type { ProjectEstimateState } from '../../hooks/useMultiRoomProject.js';
 import { ExportReportModal } from '../reports/ExportReportModal.js';
+import { MaterialSummary, MaterialSummaryHeading } from './MaterialSummary.js';
 import { useUnit } from '../../contexts/UnitContext.js';
 import { useLanguage } from '../../contexts/LanguageContext.js';
 import { formatBilingual } from '../../constants/terminology.js';
@@ -128,6 +129,14 @@ export function HouseSummary({ totalRooms, projectName, estimate, onCalculate, r
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Material summary (aggregated across rooms, floors and buildings) */}
+          {result.materialSummary && (
+            <div>
+              <MaterialSummaryHeading />
+              <MaterialSummary lines={result.materialSummary} costSummary={result.costSummary} />
             </div>
           )}
 

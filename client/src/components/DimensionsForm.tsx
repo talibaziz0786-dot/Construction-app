@@ -3,6 +3,7 @@ import type { RoomGeometry } from '../types/project.js';
 import { RoomDimensionsCard } from './forms/RoomDimensionsCard.js';
 import { OpeningsCard } from './forms/OpeningsCard.js';
 import { BrickSpecsCard } from './forms/BrickSpecsCard.js';
+import { FinishesCard } from './forms/FinishesCard.js';
 import { WallSelectorCard } from './forms/WallSelectorCard.js';
 import type { EstimationScopeType } from './forms/WallSelectorCard.js';
 
@@ -44,6 +45,7 @@ export const DimensionsForm: React.FC<DimensionsFormProps> = ({
       <RoomDimensionsCard geometry={geometry} onChange={onChange} />
       <OpeningsCard geometry={geometry} onChange={onChange} />
       <BrickSpecsCard geometry={geometry} onChange={onChange} />
+      <FinishesCard geometry={geometry} onChange={onChange} />
     </div>
   );
 };

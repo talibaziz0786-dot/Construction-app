@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import app from '../app.js';
 import { UserModel } from './user.model.js';
@@ -118,5 +118,50 @@ describe('Authentication & Project Ownership', () => {
     // User 2 tries to delete User 1's project -> should fail
     const deleteRes = await agent2.delete('/api/projects/proj-owned-1');
     expect([403, 404]).toContain(deleteRes.status);
+  });
+
+  it('should hide another user-owned project on legacy public routes', async () => {
+    const agent1 = request.agent(app);
+    const agent2 = request.agent(app);
+
+    await agent1.post('/api/auth/register').send({
+      name: 'Legacy Owner',
+      email: 'legacy-owner@example.com',
+      password: 'Password123',
+    });
+    await agent2.post('/api/auth/register').send({
+      name: 'Legacy Attacker',
+      email: 'legacy-attacker@example.com',
+      password: 'Password123',
+    });
+
+    const createRes = await agent1.post('/api/projects').send({
+      projectId: 'proj-legacy-owned',
+      name: 'Legacy Owned Project',
+      type: 'house',
+      buildings: [],
+    });
+    expect(createRes.status).toBe(200);
+
+    const readRes = await agent2.get('/api/projects/proj-legacy-owned');
+    expect(readRes.status).toBe(404);
+
+    const overwriteRes = await agent2.post('/api/projects').send({
+      projectId: 'proj-legacy-owned',
+      name: 'Legacy Takeover Attempt',
+      type: 'house',
+      buildings: [],
+    });
+    expect(overwriteRes.status).toBe(404);
+
+    const rateCardRes = await agent2.put('/api/projects/proj-legacy-owned/rate-card').send({
+      currency: 'USD',
+      entries: [],
+    });
+    expect(rateCardRes.status).toBe(404);
+
+    const ownerReadRes = await agent1.get('/api/projects/proj-legacy-owned');
+    expect(ownerReadRes.status).toBe(200);
+    expect(ownerReadRes.body.name).toBe('Legacy Owned Project');
   });
 });

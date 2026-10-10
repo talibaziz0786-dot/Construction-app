@@ -93,6 +93,45 @@ export interface RoomSummaryItem {
   procurementQuantityBricks: number;
 }
 
+/** One aggregated material line across every room it came from (server-computed). */
+export interface MaterialSummaryLine {
+  /** Stable deterministic key: `<category>:<baseUnit>`. */
+  id: string;
+  category: string;
+  description: string;
+  /** Base unit of the aggregated dimension (cu.m, sq.m, kg, piece, …). */
+  unit: string;
+  dimension: string;
+  theoreticalQuantity: number;
+  procurementQuantity: number;
+  /** Effective wastage: (procurement - theoretical) / theoretical × 100. */
+  wastagePercentage: number;
+  lineCount: number;
+  contexts: string[];
+  sources: Array<{ calculatorId: string; methodologyVersion: string }>;
+  warnings: string[];
+  assumptions: string[];
+}
+
+/** Deterministic traversal order the server used (building → floor → room). */
+export interface ProjectTraversalEntry {
+  buildingId: string;
+  floorId: string;
+  roomId: string;
+}
+
+/** Per-room calculator trace returned by the server. */
+export interface ProjectCalculationTraceEntry extends ProjectTraversalEntry {
+  calculators: string[];
+}
+
+/** Duplicate-room / material-line integrity report. */
+export interface ProjectIntegrityReport {
+  duplicateRoomIds: string[];
+  roomCount: number;
+  materialLineCount: number;
+}
+
 export interface CalculationResultSummary {
   floorAreaSqM: number;
   grossWallAreaSqM?: number;
@@ -106,6 +145,10 @@ export interface CalculationResultSummary {
   totalRooms?: number;
   currency?: string;
   roomSummaries?: RoomSummaryItem[];
+  materialSummary?: MaterialSummaryLine[];
+  traversal?: ProjectTraversalEntry[];
+  calculationTrace?: ProjectCalculationTraceEntry[];
+  integrity?: ProjectIntegrityReport;
   costSummary?: ProjectCostSummary;
   boq?: Boq;
   warnings: string[];

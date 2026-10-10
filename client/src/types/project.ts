@@ -43,6 +43,11 @@ export interface RoomGeometry {
   brickHeightMeters: number;
   mortarJointThicknessMeters: number;
   wastagePercentage: number;
+  /** Optional finishing specifications (canonical metres). */
+  slabDepthMeters?: number;
+  plasterThicknessMeters?: number;
+  tileLengthMeters?: number;
+  tileWidthMeters?: number;
 }
 
 export interface IOpeningSchema {
@@ -67,6 +72,10 @@ export interface IRoomSchema {
   brickHeightMeters: number;
   mortarJointThicknessMeters: number;
   wastagePercentage: number;
+  slabDepthMeters?: number;
+  plasterThicknessMeters?: number;
+  tileLengthMeters?: number;
+  tileWidthMeters?: number;
 }
 
 export interface IFloorSchema {

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import app from '../../../app.js';
+import { aggregateMaterialLines } from '../../estimation/domain/materials/aggregation.js';
+import { Unit } from '../../estimation/domain/units/types.js';
+import { calculateRoomFinishes } from '../../estimation/services/RoomFinishesService.js';
 
 describe('Project Estimation Scope Integration Tests (/api/projects/calculate)', () => {
   const baseProject = {
@@ -253,5 +256,161 @@ describe('Project Estimation Scope Integration Tests (/api/projects/calculate)',
       expect(detail).not.toContain('${i.path');
       expect(detail).toContain(':');
     }
+  });
+
+  it('traverses project deterministically with material summary', async () => {
+    const house = {
+      projectId: 'phase3-multi',
+      name: 'Phase 3 House',
+      currency: 'INR',
+      buildings: [
+        {
+          id: 'b1',
+          name: 'Main Building',
+          floors: [
+            {
+              id: 'f1',
+              name: 'Ground Floor',
+              level: 0,
+              rooms: [
+                {
+                  id: 'room-a',
+                  name: 'Room A',
+                  lengthMeters: 5,
+                  widthMeters: 4,
+                  wallHeightMeters: 3,
+                  wallThicknessMeters: 0.23,
+                  openings: [],
+                  wastagePercentage: 5,
+                },
+              ],
+            },
+            {
+              id: 'f2',
+              name: 'First Floor',
+              level: 1,
+              rooms: [
+                {
+                  id: 'room-b',
+                  name: 'Room B',
+                  lengthMeters: 4,
+                  widthMeters: 3,
+                  wallHeightMeters: 3,
+                  wallThicknessMeters: 0.23,
+                  openings: [],
+                  wastagePercentage: 5,
+                },
+                {
+                  id: 'room-c',
+                  name: 'Room C',
+                  lengthMeters: 3,
+                  widthMeters: 3,
+                  wallHeightMeters: 3,
+                  wallThicknessMeters: 0.23,
+                  openings: [],
+                  wastagePercentage: 5,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const first = await request(app).post('/api/projects/calculate').send(house);
+    const second = await request(app).post('/api/projects/calculate').send(house);
+
+    expect(first.status).toBe(200);
+    expect(first.body.totalRooms).toBe(3);
+    expect(first.body.traversal.map((t: { roomId: string }) => t.roomId)).toEqual(['room-a', 'room-b', 'room-c']);
+    expect(first.body.integrity.duplicateRoomIds).toEqual([]);
+    expect(first.body.boq.sections).toHaveLength(3);
+    expect(first.body.costSummary.rooms).toHaveLength(3);
+    expect(JSON.stringify(second.body.traversal)).toBe(JSON.stringify(first.body.traversal));
+    expect(JSON.stringify(second.body.materialSummary)).toBe(JSON.stringify(first.body.materialSummary));
+    const brick = (first.body.materialSummary as Array<{ category: string; procurementQuantity: number; contexts: string[] }>).find((m) => m.category === 'brick');
+    expect(brick).toBeDefined();
+    expect(brick?.contexts).toEqual(expect.arrayContaining(['Room A', 'Room B', 'Room C']));
+    const brickTotal = first.body.roomSummaries.reduce((s: number, r: { procurementQuantityBricks: number }) => s + r.procurementQuantityBricks, 0);
+    expect(brick?.procurementQuantity).toBe(brickTotal);
+  });
+
+  it('keeps unpriced lines honest when rates are missing', async () => {
+    const res = await request(app).post('/api/projects/calculate').send({
+      projectId: 'phase3-unpriced',
+      name: 'Unpriced House',
+      buildings: [
+        {
+          id: 'b1',
+          name: 'Main Building',
+          floors: [
+            {
+              id: 'f1',
+              name: 'Ground Floor',
+              level: 0,
+              rooms: [
+                {
+                  id: 'room-1',
+                  name: 'Room 1',
+                  lengthMeters: 5,
+                  widthMeters: 4,
+                  wallHeightMeters: 3,
+                  wallThicknessMeters: 0.23,
+                  openings: [],
+                  wastagePercentage: 5,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.costSummary.hasMissingRates).toBe(true);
+    expect(res.body.boq.hasMissingRates).toBe(true);
+    const missing = res.body.costSummary.rooms[0].items.filter((i: { missingRate: boolean }) => i.missingRate);
+    expect(missing.length).toBeGreaterThan(0);
+  });
+
+  it('aggregates compatible units and runs all six canonical calculators', async () => {
+    const merged = aggregateMaterialLines([
+      {
+        category: 'sand',
+        description: 'Sand',
+        unit: Unit.CU_M,
+        theoreticalQuantity: 1,
+        procurementQuantity: 1,
+        wastagePercentage: 0,
+        sourceCalculatorId: 'concrete.volume',
+        sourceMethodologyVersion: '1.0.0',
+        context: 'Room A',
+      },
+      {
+        category: 'sand',
+        description: 'Sand',
+        unit: Unit.CU_FT,
+        theoreticalQuantity: 35.3147,
+        procurementQuantity: 35.3147,
+        wastagePercentage: 0,
+        sourceCalculatorId: 'concrete.volume',
+        sourceMethodologyVersion: '1.0.0',
+        context: 'Room B',
+      },
+    ]);
+    const sand = merged.filter((m) => m.category === 'sand');
+    expect(sand).toHaveLength(1);
+    expect(sand[0].procurementQuantity).toBeCloseTo(2, 3);
+
+    const finishes = await calculateRoomFinishes(
+      { id: 'room-1', name: 'Room 1', lengthMeters: 5, widthMeters: 4 },
+      45.6,
+      20,
+      { wastagePercentage: 5 }
+    );
+    expect(finishes.concreteVolumeCuM).toBeCloseTo(3, 5);
+    expect(finishes.plasterMixRatio).toBe('1:4');
+    expect(finishes.plasterCementBags).toBeGreaterThan(0);
+    expect(finishes.theoreticalTileCount).toBeGreaterThan(0);
   });
 });

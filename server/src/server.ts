@@ -7,28 +7,25 @@ dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
-// --- Environment config with sensible defaults for MVP ---
-const MONGODB_URI = process.env.MONGODB_URI ?? 'mongodb://localhost:27017/construction-app';
-const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-jwt-secret-change-in-production';
-const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-
 // --- Minimal env validation ---
-const requiredEnvVars: Array<{ name: string; fallback?: string }> = [
-  { name: 'MONGODB_URI' },
-];
+// MONGODB_URI is always required: the server must never silently fall back to
+// a localhost database outside local development.
+// In production, JWT_SECRET and FRONTEND_URL are also required so a deployed
+// instance can never fall back to a known default signing secret or to a
+// localhost-only CORS allowlist (both would be silent security/config failures).
+const requiredEnvVars: string[] = ['MONGODB_URI'];
+if (process.env.NODE_ENV === 'production') {
+  requiredEnvVars.push('JWT_SECRET', 'FRONTEND_URL');
+}
 
-const missing = requiredEnvVars.filter(({ name, fallback }) => {
-  if (process.env[name]) return false;
-  if (fallback) return false;
-  return true;
-});
+const missing = requiredEnvVars.filter((name) => !process.env[name]);
 
 if (missing.length > 0) {
   console.error(
     '[startup] Missing required environment variables:',
-    missing.map((v) => v.name).join(', ')
+    missing.join(', ')
   );
-  console.error('[startup] Copy server/.env.example to server/.env and configure values.');
+  console.error('[startup] Copy server/.env.example to server/.env (locally) or set them in the hosting dashboard (e.g. Render).');
   process.exit(1);
 }
 

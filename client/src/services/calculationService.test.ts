@@ -126,4 +126,31 @@ describe('project calculate payload', () => {
     const payload = buildProjectCalculatePayload(validHouse(), null);
     expect(payload.buildings).toHaveLength(1);
   });
+
+  it('forwards finishing specs only when the user actually set them', () => {
+    const full = validHouse();
+    const room = full.buildings[0].floors[0].rooms[0] as Record<string, unknown>;
+    room.slabDepthMeters = 0.2;
+    room.plasterThicknessMeters = 0.015;
+    room.tileLengthMeters = 0.6;
+    room.tileWidthMeters = 0.6;
+
+    const withFinishes = firstRoom(buildProjectCalculatePayload(full));
+    expect(withFinishes.slabDepthMeters).toBe(0.2);
+    expect(withFinishes.plasterThicknessMeters).toBe(0.015);
+    expect(withFinishes.tileLengthMeters).toBe(0.6);
+    expect(withFinishes.tileWidthMeters).toBe(0.6);
+
+    const withoutFinishes = firstRoom(buildProjectCalculatePayload(validHouse()));
+    expect(withoutFinishes).not.toHaveProperty('slabDepthMeters');
+    expect(withoutFinishes).not.toHaveProperty('plasterThicknessMeters');
+    expect(withoutFinishes).not.toHaveProperty('tileLengthMeters');
+    expect(withoutFinishes).not.toHaveProperty('tileWidthMeters');
+
+    // Non-finite values are never forwarded (server keeps its documented default).
+    const broken = validHouse();
+    const brokenRoom = broken.buildings[0].floors[0].rooms[0] as Record<string, unknown>;
+    brokenRoom.slabDepthMeters = Number.NaN;
+    expect(firstRoom(buildProjectCalculatePayload(broken))).not.toHaveProperty('slabDepthMeters');
+  });
 });

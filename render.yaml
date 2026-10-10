@@ -1,0 +1,23 @@
+# Render blueprint for the API service (server workspace).
+# Manual alternative: follow README.md "Step 2: Backend (Render)".
+# Secrets are never committed here — enter MONGODB_URI / JWT_SECRET / FRONTEND_URL
+# in the Render dashboard (Environment section), not in this file.
+services:
+  - type: web
+    name: construction-app-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

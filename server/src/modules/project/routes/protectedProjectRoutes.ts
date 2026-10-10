@@ -9,8 +9,8 @@ const router = express.Router();
 const RateCardEntrySchema = z.object({
   category: z.enum(SUPPORTED_MATERIAL_CATEGORIES),
   item: z.string().max(120).optional(),
-  rate: z.number().nullable().refine(
-    (v) => v === null || (Number.isFinite(v) && v >= 0 && v <= 1000000),
+  rate: z.number().finite().nullable().refine(
+    (v) => v === null || (v >= 0 && v <= 1000000),
     { message: 'Rate must be null, 0, or a non-negative number up to 1000000' }
   ),
   unit: z.string().min(1).max(20),

@@ -27,6 +27,10 @@ export interface IRoomSchema {
   plasterThicknessMeters?: number;
   tileLengthMeters?: number;
   tileWidthMeters?: number;
+  cementRatio?: number;
+  sandRatio?: number;
+  dryVolumeFactor?: number;
+  cementBagWeightKg?: number;
 }
 
 export interface IFloorSchema {
@@ -100,6 +104,10 @@ const RoomSchema = new Schema({
   plasterThicknessMeters: { type: Number, default: 0.012 },
   tileLengthMeters: { type: Number, default: 0.5 },
   tileWidthMeters: { type: Number, default: 0.5 },
+  cementRatio: { type: Number, default: 1 },
+  sandRatio: { type: Number, default: 4 },
+  dryVolumeFactor: { type: Number, default: 1.33 },
+  cementBagWeightKg: { type: Number, default: 50 },
 }, { _id: false });
 
 const FloorSchema = new Schema({

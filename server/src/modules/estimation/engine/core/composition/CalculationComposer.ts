@@ -207,6 +207,18 @@ export function readNumberField(source: unknown, field: string): number | undefi
 }
 
 /**
+ * Reads a top-level string field from a calculator output payload.
+ * Returns `undefined` when the field is absent or is not a string.
+ */
+export function readStringField(source: unknown, field: string): string | undefined {
+  if (typeof source !== 'object' || source === null) {
+    return undefined;
+  }
+  const value = (source as Record<string, unknown>)[field];
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
  * Reads a `Measurement` field (`{ value, unit, dimension }`) from a calculator
  * output payload and returns its value. Returns `undefined` when absent.
  */
