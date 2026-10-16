@@ -2,6 +2,7 @@ import express, { Response } from 'express';
 import { z } from 'zod';
 import { ProjectModel } from '../models/ProjectModel.js';
 import { AuthRequest, requireAuth } from '../../../auth/auth.middleware.js';
+import { requirePersistence } from '../../../config/database.js';
 import { SUPPORTED_MATERIAL_CATEGORIES } from '../../estimation/domain/project/RateCard.js';
 
 const router = express.Router();
@@ -50,7 +51,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Update project (requires ownership)
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, requirePersistence, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
     const { name, type, buildings, rateCard } = req.body;
@@ -88,7 +89,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Delete project (requires ownership)
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, requirePersistence, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
 
@@ -107,7 +108,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // Update rate card (requires ownership)
-router.put('/:id/rate-card', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id/rate-card', requireAuth, requirePersistence, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
     const parsed = RateCardSchema.safeParse(req.body);

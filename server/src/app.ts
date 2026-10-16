@@ -78,9 +78,14 @@ app.get('/api/health', (req: Request, res: Response) => {
   const dbStates = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   const readyState = mongoose.connection.readyState;
   const state = dbStates[readyState] ?? 'unknown';
+  // Render health checks only need the process to answer; persistence
+  // readiness is reported explicitly so dashboards never mistake the
+  // in-memory fallback for a healthy database.
+  const db = readyState === 1 ? 'connected' : 'unavailable';
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    db,
     mongo: {
       readyState,
       state,

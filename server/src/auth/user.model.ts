@@ -34,8 +34,7 @@ const userSchema = new Schema({
   timestamps: true,
 });
 
-userSchema.index({ email: 1 }, { unique: true });
-
+// Single canonical unique index on email (field already has unique:true; no duplicate declaration).
 userSchema.methods.comparePassword = function (candidate: string): Promise<boolean> {
   return bcrypt.compare(candidate, this.passwordHash);
 };

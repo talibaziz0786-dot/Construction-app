@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { UserModel, hashPassword, IUser } from './user.model.js';
 import { signAuthToken, verifyAuthToken } from './jwt.js';
+import { requirePersistence } from '../config/database.js';
 
 const router = Router();
 
@@ -29,7 +30,7 @@ const loginSchema = z.object({
 });
 
 // Register endpoint
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', requirePersistence, async (req: Request, res: Response) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -76,7 +77,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // Login endpoint
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', requirePersistence, async (req: Request, res: Response) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {

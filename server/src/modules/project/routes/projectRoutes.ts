@@ -2,6 +2,7 @@ import express, { Response, Router } from 'express';
 import { z } from 'zod';
 import { ProjectModel } from '../models/ProjectModel.js';
 import { AuthRequest, optionalAuth } from '../../../auth/auth.middleware.js';
+import { requirePersistence } from '../../../config/database.js';
 import { SUPPORTED_MATERIAL_CATEGORIES } from '../../estimation/domain/project/RateCard.js';
 
 const router = Router();
@@ -122,7 +123,7 @@ router.get('/projects/:id', optionalAuth, async (req: AuthRequest, res: Response
   }
 });
 
-router.post('/projects', optionalAuth, async (req: AuthRequest, res: Response) => {
+router.post('/projects', optionalAuth, requirePersistence, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = ProjectSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -191,7 +192,7 @@ router.get('/projects/:id/rate-card', optionalAuth, async (req: AuthRequest, res
 // PUT/UPDATE rate card for a project
 // Legacy guest-compatible mutation path. Authenticated projects require the
 // caller to own the project; guest-created projects remain writable by guests.
-router.put('/projects/:id/rate-card', optionalAuth, async (req: AuthRequest, res: Response) => {
+router.put('/projects/:id/rate-card', optionalAuth, requirePersistence, async (req: AuthRequest, res: Response) => {
   try {
     const id = asString(req.params.id);
     const parsed = RateCardSchema.safeParse(req.body);
