@@ -51,9 +51,9 @@ describe('CORS frontend origin handling', () => {
     expect(res.headers['access-control-allow-origin']).not.toBe('*');
   });
 
-  it('answers OPTIONS preflight for auth and calculator endpoints with required headers', async () => {
+  it('answers OPTIONS preflight for auth, calculator and project-calculate endpoints with required headers', async () => {
     const app = await loadAppWithFrontendUrl(PRODUCTION_ORIGIN);
-    for (const path of ['/api/auth/login', '/api/calculators']) {
+    for (const path of ['/api/auth/login', '/api/calculators', '/api/projects/calculate']) {
       const res = await request(app)
         .options(path)
         .set('Origin', PRODUCTION_ORIGIN)
@@ -61,6 +61,8 @@ describe('CORS frontend origin handling', () => {
         .set('Access-Control-Request-Headers', 'Content-Type,Authorization');
       expect([200, 204]).toContain(res.status);
       expect(res.headers['access-control-allow-origin']).toBe(PRODUCTION_ORIGIN);
+      expect(res.headers['access-control-allow-origin']).not.toBe('*');
+      expect(res.headers['access-control-allow-credentials']).toBe('true');
       const methods = String(res.headers['access-control-allow-methods'] ?? '');
       expect(methods).toMatch(/POST/);
       expect(methods).toMatch(/OPTIONS/);
@@ -68,6 +70,17 @@ describe('CORS frontend origin handling', () => {
       expect(headers.toLowerCase()).toMatch(/content-type/);
       expect(headers.toLowerCase()).toMatch(/authorization/);
     }
+  });
+
+  it('denies OPTIONS preflight for an unrelated origin on /api/projects/calculate', async () => {
+    const app = await loadAppWithFrontendUrl(PRODUCTION_ORIGIN);
+    const res = await request(app)
+      .options('/api/projects/calculate')
+      .set('Origin', ATTACKER_ORIGIN)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'Content-Type');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    expect(res.headers['access-control-allow-origin']).not.toBe('*');
   });
 
   it('supports comma-separated FRONTEND_URL allowlist entries', async () => {
